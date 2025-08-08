@@ -3,8 +3,7 @@ from database import db
 from pinecone import Pinecone
 import os
 from dotenv import load_dotenv
-from pymongo import MongoClient
-
+from pydantic import BaseModel
 load_dotenv()
 
 # Initialize FastAPI application
@@ -35,10 +34,13 @@ async def read_root():
     await db["test_collection"].insert_one({"message": "Hello, Mongo!"})
     return {"message": "Welcome to the Semantic Search API!"}
 
-@app.post("/register")
-def register_user():
-    return {'data': 'User registered successfully!'}
+class User(BaseModel):
+    username: str
+    email: str
+    description: str
+    skills: list[str]
+    
 
 @app.post("/api/v1/register")
-def register_user_v1():
+def register_user_v1(user: User):
     return {'data': 'User registered successfully in v1!'}
