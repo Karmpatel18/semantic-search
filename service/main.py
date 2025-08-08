@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import uvicorn
 from database import db
 from pinecone import Pinecone
 import os
@@ -43,4 +44,8 @@ class User(BaseModel):
 
 @app.post("/api/v1/register")
 def register_user_v1(user: User):
-    return {'data': 'User registered successfully in v1!'}
+    return {'data': 'User registered successfully!'}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)
