@@ -1,8 +1,9 @@
 from fastapi import FastAPI
+from database import db
 from pinecone import Pinecone
 import os
 from dotenv import load_dotenv
-
+from pymongo import MongoClient
 
 load_dotenv()
 
@@ -29,9 +30,15 @@ if not pc.has_index(index_name):
 
 
 @app.get("/")
-def read_root():
-    return {'data': 'Hello, World!'}
+async def read_root():
+    # Example: Fetch all documents from 'users' collection
+    await db["test_collection"].insert_one({"message": "Hello, Mongo!"})
+    return {"message": "Welcome to the Semantic Search API!"}
 
 @app.post("/register")
 def register_user():
     return {'data': 'User registered successfully!'}
+
+@app.post("/api/v1/register")
+def register_user_v1():
+    return {'data': 'User registered successfully in v1!'}
