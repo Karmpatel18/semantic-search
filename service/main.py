@@ -43,8 +43,9 @@ class User(BaseModel):
     
 
 @app.post("/api/v1/register")
-def register_user_v1(user: User):
-    return {'data': 'User registered successfully!'}
+async def register_user_v1(user: User):
+    await db["users"].insert_one(user.model_dump())
+    return {"message": "User registered successfully!"}
 
 
 if __name__ == "__main__":
