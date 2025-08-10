@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-
+from database import user_collection
 import uvicorn
 # from pinecone import Pinecone
 # import os
@@ -53,7 +53,7 @@ async def read_root(db = Depends(get_database)):
 
 @app.post("/api/v1/register")
 async def register_user_v1(user: User, db = Depends(get_database)):
-    result = await db["users"].insert_one(user.model_dump())
+    result = await user_collection.insert_one(user.model_dump())
     return {"message": "User registered successfully!", "user_id": str(result.inserted_id)}
 
 
