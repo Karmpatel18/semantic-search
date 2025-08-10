@@ -1,51 +1,60 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
+
 import uvicorn
-from database import db
-from pinecone import Pinecone
-import os
-from dotenv import load_dotenv
-from pydantic import BaseModel
-load_dotenv()
-
-# Initialize FastAPI application
+# from pinecone import Pinecone
+# import os
+# from dotenv import load_dotenv
+from schemas import User
+from database import get_database 
+# load_dotenv()
 app = FastAPI()
-# Initialize Pinecone with the API key from environment variables
-pc = Pinecone(api_key=os.getenv("PINE_API"))
 
-index_name = "semantic-search-index"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          # Specific origins
+    allow_credentials=True,         # Allow cookies/auth headers
+    allow_methods=["*"],             # Allow all HTTP methods
+    allow_headers=["*"],             # Allow all headers
+)
 
-if not pc.has_index(index_name):
-    pc.create_index_for_model(
-        name=index_name,
-        cloud="aws",
-        region="us-east-1",
-        embed={
-            "model":"llama-text-embed-v2",
-            "field_map":{"text": "chunk_text"}
-        }
-    )
+
+
+
+# pc = Pinecone(api_key=os.getenv("PINE_API"))
+
+# index_name = "semantic-search-index"
+
+# if not pc.has_index(index_name):
+#     pc.create_index_for_model(
+#         name=index_name,
+#         cloud="aws",
+#         region="us-east-1",
+#         embed={
+#             "model":"llama-text-embed-v2",
+#             "field_map":{"text": "chunk_text"}
+#         }
+#     )
     
     
 
 
 
 @app.get("/")
-async def read_root():
-    # Example: Fetch all documents from 'users' collection
-    await db["test_collection"].insert_one({"message": "Hello, Mongo!"})
-    return {"message": "Welcome to the Semantic Search API!"}
+async def read_root(db = Depends(get_database)):
+    users = await db["users"].find().to_list(length=None)
+    # Convert ObjectId to string for JSON serialization
+    for user in users:
+        if "_id" in user:
+            user["_id"] = str(user["_id"])
+    return users
 
-class User(BaseModel):
-    username: str
-    email: str
-    description: str
-    skills: list[str]
-    
+
 
 @app.post("/api/v1/register")
-async def register_user_v1(user: User):
-    await db["users"].insert_one(user.model_dump())
-    return {"message": "User registered successfully!"}
+async def register_user_v1(user: User, db = Depends(get_database)):
+    result = await db["users"].insert_one(user.model_dump())
+    return {"message": "User registered successfully!", "user_id": str(result.inserted_id)}
 
 
 if __name__ == "__main__":
