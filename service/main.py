@@ -53,6 +53,18 @@ async def read_root(db = Depends(get_database)):
             user["_id"] = str(user["_id"])
     return users
 
+data = [
+    {"_id":"68977adbbcb8c5676b2cd1e5","username":"karmpatel","email":"1234","description":"hi i ma karm","skills":["sql","react"]},
+    {"_id":"6898c32c4054f35bf5b97f0c","username":"yuvraj parmar","email":"1234","description":"hi i ma yucraj","skills":["sql","react"]},
+    {"_id":"689cb285d6c96036bf8001c2","username":"harsh patel","email":"1234 bairo che","description":"hi i am harsh","skills":["sql","react","flutter"]}
+]
+
+def prepare_text(item):
+    return f"Username: {item['username']}. Description: {item['description']}. Skills: {', '.join(item['skills'])}."
+
+texts = [prepare_text(d) for d in data]
+embeddings  = model.encode(texts).tolist()
+print(embeddings)
 
 
 @app.post("/api/v1/register")
