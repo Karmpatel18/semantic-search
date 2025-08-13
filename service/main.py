@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from database import user_collection
 import uvicorn
-from pinecone import Pinecone
+from pinecone import Pinecone, ServerlessSpec
 import os
 from dotenv import load_dotenv
 from schemas import User
@@ -27,20 +27,6 @@ app.add_middleware(
 
 pc = Pinecone(api_key=os.getenv("PINE_API"))
 
-index_name = "semantic-search-index"
-
-if not pc.has_index(index_name):
-    pc.create_index_for_model(
-        name=index_name,
-        cloud="aws",
-        region="us-east-1",
-        embed={
-            "model":"llama-text-embed-v2",
-            "field_map":{"text": "chunk_text"}
-        }
-    )
-    
-    
 
 
 
@@ -64,8 +50,49 @@ def prepare_text(item):
 
 texts = [prepare_text(d) for d in data]
 embeddings  = model.encode(texts).tolist()
-print(embeddings)
 
+print(len(embeddings), len(embeddings[0]))
+
+index_name = "test"
+
+if index_name not in [i.name for i in pc.list_indexes()]:
+    pc.create_index(
+        name=index_name,
+        dimension=384,  # Must match embedding size
+        metric="cosine",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1")
+    )
+index = pc.Index(index_name)
+
+to_upsert = []
+
+for i, item in enumerate(data):
+    to_upsert.append((
+        item["_id"],
+        embeddings[i],
+        {
+            "username": item["username"],
+            "email": item["email"],
+            "description": item["description"],
+            "skills": item["skills"]
+        }
+    ))
+
+index.upsert(vectors=to_upsert, namespace="users")
+print("✅ Data upserted successfully!")
+
+query = "developer skilled in flutter"
+query_vector = model.encode([query]).tolist()
+
+result = index.query(
+    vector=query_vector[0],
+    top_k=2,
+    include_metadata=True,
+    namespace="users"
+)
+print(result)
+for match in result['matches']:
+    print(match['score'], match['metadata'])
 
 @app.post("/api/v1/register")
 async def register_user_v1(user: User, db = Depends(get_database)):
