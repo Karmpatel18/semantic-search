@@ -2,13 +2,17 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from database import user_collection
 import uvicorn
-# from pinecone import Pinecone
-# import os
-# from dotenv import load_dotenv
+from pinecone import Pinecone
+import os
+from dotenv import load_dotenv
 from schemas import User
 from database import get_database 
-# load_dotenv()
+from sentence_transformers import SentenceTransformer
+
+load_dotenv()
 app = FastAPI()
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,20 +25,20 @@ app.add_middleware(
 
 
 
-# pc = Pinecone(api_key=os.getenv("PINE_API"))
+pc = Pinecone(api_key=os.getenv("PINE_API"))
 
-# index_name = "semantic-search-index"
+index_name = "semantic-search-index"
 
-# if not pc.has_index(index_name):
-#     pc.create_index_for_model(
-#         name=index_name,
-#         cloud="aws",
-#         region="us-east-1",
-#         embed={
-#             "model":"llama-text-embed-v2",
-#             "field_map":{"text": "chunk_text"}
-#         }
-#     )
+if not pc.has_index(index_name):
+    pc.create_index_for_model(
+        name=index_name,
+        cloud="aws",
+        region="us-east-1",
+        embed={
+            "model":"llama-text-embed-v2",
+            "field_map":{"text": "chunk_text"}
+        }
+    )
     
     
 
@@ -42,7 +46,7 @@ app.add_middleware(
 
 @app.get("/")
 async def read_root(db = Depends(get_database)):
-    users = await db["users"].find().to_list(length=None)
+    users = await user_collection.find().to_list(length=None)
     # Convert ObjectId to string for JSON serialization
     for user in users:
         if "_id" in user:
